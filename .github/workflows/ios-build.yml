@@ -1,0 +1,49 @@
+name: Unsigned iOS device build
+
+on:
+  push:
+    branches: [ios16-build]
+  workflow_dispatch:
+    inputs:
+      deployment_target:
+        description: '17.0 (baseline) or 16.0 (experimental compatibility probe)'
+        type: choice
+        options: ['17.0', '16.0']
+        default: '17.0'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode 26.2
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+      - name: Build unsigned iPhoneOS app
+        env:
+          DEPLOYMENT_TARGET: ${{ inputs.deployment_target || '17.0' }}
+        run: |
+          set -o pipefail
+          xcodebuild -version
+          xcodebuild -resolvePackageDependencies -project FreeTube/FreeTube.xcodeproj -scheme FreeTube -onlyUsePackageVersionsFromResolvedFile
+          xcodebuild build \
+            -project FreeTube/FreeTube.xcodeproj -scheme FreeTube \
+            -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -onlyUsePackageVersionsFromResolvedFile \
+            IPHONEOS_DEPLOYMENT_TARGET="$DEPLOYMENT_TARGET" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$RUNNER_TEMP/DerivedData/Build/Products/Release-iphoneos/FreeTube.app" "$RUNNER_TEMP/ipa/Payload/"
+          cd "$RUNNER_TEMP/ipa"
+          zip -qry "$GITHUB_WORKSPACE/FreeTube-unsigned.ipa" Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FreeTube-unsigned-iphoneos
+          path: FreeTube-unsigned.ipa
+          if-no-files-found: error
