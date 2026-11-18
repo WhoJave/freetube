@@ -36,7 +36,7 @@ final class FreeTubeBrowser: NSObject, ObservableObject, WKNavigationDelegate, W
            let stored = try? JSONDecoder().decode([SavedPage].self, from: data) {
             bookmarks = stored
         }
-        open(homeURL)
+        open(Self.homeURL)
     }
 
     func open(_ url: URL) {
