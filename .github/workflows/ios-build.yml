@@ -1,49 +1,90 @@
-name: Unsigned iOS device build
+name: FreeTube device builds (iOS 17 native / iOS 16 WebKit)
 
 on:
   push:
     branches: [ios16-build]
   workflow_dispatch:
-    inputs:
-      deployment_target:
-        description: '17.0 (baseline) or 16.0 (experimental compatibility probe)'
-        type: choice
-        options: ['17.0', '16.0']
-        default: '17.0'
 
 permissions:
   contents: read
 
 jobs:
-  build:
+  native-ios17:
+    name: Native FreeTube (iOS 17.0+)
     runs-on: macos-26
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - name: Select Xcode 26.2
         run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
-      - name: Build unsigned iPhoneOS app
-        env:
-          DEPLOYMENT_TARGET: ${{ inputs.deployment_target || '17.0' }}
+      - name: Build native iPhoneOS app
         run: |
           set -o pipefail
-          xcodebuild -version
-          xcodebuild -resolvePackageDependencies -project FreeTube/FreeTube.xcodeproj -scheme FreeTube -onlyUsePackageVersionsFromResolvedFile
+          xcodebuild -resolvePackageDependencies \
+            -project FreeTube/FreeTube.xcodeproj -scheme FreeTube \
+            -onlyUsePackageVersionsFromResolvedFile
           xcodebuild build \
             -project FreeTube/FreeTube.xcodeproj -scheme FreeTube \
             -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -onlyUsePackageVersionsFromResolvedFile \
-            IPHONEOS_DEPLOYMENT_TARGET="$DEPLOYMENT_TARGET" \
+            IPHONEOS_DEPLOYMENT_TARGET=17.0 \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
-      - name: Package unsigned IPA
+      - name: Verify native app minimum OS
+        run: |
+          APP="$RUNNER_TEMP/DerivedData/Build/Products/Release-iphoneos/FreeTube.app"
+          MIN_OS=$(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$APP/Info.plist")
+          echo "Native app minimum OS: $MIN_OS"
+          test "$MIN_OS" = "17.0"
+      - name: Package native unsigned IPA
         run: |
           mkdir -p "$RUNNER_TEMP/ipa/Payload"
           cp -R "$RUNNER_TEMP/DerivedData/Build/Products/Release-iphoneos/FreeTube.app" "$RUNNER_TEMP/ipa/Payload/"
           cd "$RUNNER_TEMP/ipa"
-          zip -qry "$GITHUB_WORKSPACE/FreeTube-unsigned.ipa" Payload
+          zip -qry "$GITHUB_WORKSPACE/FreeTube-iOS17-Native-unsigned.ipa" Payload
       - uses: actions/upload-artifact@v4
         with:
-          name: FreeTube-unsigned-iphoneos
-          path: FreeTube-unsigned.ipa
+          name: FreeTube-iOS17-Native-unsigned
+          path: FreeTube-iOS17-Native-unsigned.ipa
           if-no-files-found: error
+
+  webkit-ios16:
+    name: WebKit compatibility edition (iOS 16.0+)
+    runs-on: macos-26
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode 26.2
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate iOS 16 project
+        working-directory: iOS16
+        run: xcodegen generate
+      - name: Build unsigned iPhoneOS compatibility app
+        run: |
+          set -o pipefail
+          xcodebuild -project iOS16/FreeTubeIOS16.xcodeproj -scheme FreeTube16 \
+            -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/FreeTube16DerivedData" \
+            IPHONEOS_DEPLOYMENT_TARGET=16.0 \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+      - name: Verify compatibility app minimum OS
+        run: |
+          APP="$RUNNER_TEMP/FreeTube16DerivedData/Build/Products/Release-iphoneos/FreeTube16.app"
+          test -d "$APP"
+          MIN_OS=$(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$APP/Info.plist")
+          echo "WebKit compatibility app minimum OS: $MIN_OS"
+          test "$MIN_OS" = "16.0"
+      - name: Package iOS 16 unsigned IPA
+        run: |
+          mkdir -p "$RUNNER_TEMP/FreeTube16IPA/Payload"
+          cp -R "$RUNNER_TEMP/FreeTube16DerivedData/Build/Products/Release-iphoneos/FreeTube16.app" "$RUNNER_TEMP/FreeTube16IPA/Payload/"
+          cd "$RUNNER_TEMP/FreeTube16IPA"
+          zip -qry "$GITHUB_WORKSPACE/FreeTube16-WebKit-unsigned.ipa" Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FreeTube16-WebKit-unsigned
+          path: FreeTube16-WebKit-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14
