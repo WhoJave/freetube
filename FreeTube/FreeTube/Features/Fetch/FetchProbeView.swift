@@ -137,7 +137,7 @@ struct FetchProbeView: View {
         // Re-compute the "Convert to H.264" default whenever the user picks a new video
         // format — switching from a VP9 to an H.264 row should flip the auto-toggle off,
         // and vice versa.
-        .onChange(of: model.selectedVideoFormat?.id) { _, _ in
+        .onCompatibleChange(of: model.selectedVideoFormat?.id) { _ in
             model.recomputeConversionDefaults()
         }
     }

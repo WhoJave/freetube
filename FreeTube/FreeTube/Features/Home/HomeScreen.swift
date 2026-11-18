@@ -17,6 +17,7 @@ import SwiftData
 /// iOS/iPadOS uses the native `.searchable` modifier as usual.
 @available(iOS 17.0, *)
 struct HomeScreen: View {
+    @ObservedObject private var authState = AuthState.shared
     @State private var model = HomeViewModel()
     @State private var searchModel = SearchViewModel()
     @Environment(PlayerStateManager.self) private var player
@@ -63,7 +64,7 @@ struct HomeScreen: View {
             }
             // When the user clears the search field (binding flips to empty), drop the
             // previous results + suggestions so the home feed re-renders cleanly.
-            .onChange(of: searchModel.query) { _, newValue in
+            .onCompatibleChange(of: searchModel.query) { newValue in
                 if newValue.trimmingCharacters(in: .whitespaces).isEmpty {
                     searchModel.clearResults()
                 }
@@ -82,7 +83,7 @@ struct HomeScreen: View {
             // YouTubeModel has cookies attached, so `HomeScreenResponse` returns the user's
             // personalized feed (subscriptions, watch history hints, etc.) instead of the
             // anonymous discovery grid.
-            .onChange(of: AuthState.shared.status, initial: false) { _, _ in
+            .onCompatibleChange(of: authState.status) { _ in
                 Task { await model.refresh() }
             }
             .errorToast($model.errorState)

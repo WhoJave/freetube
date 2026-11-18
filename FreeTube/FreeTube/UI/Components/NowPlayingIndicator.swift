@@ -26,8 +26,8 @@ struct NowPlayingIndicator: View {
             style: .modern
         )
         .frame(width: 16, height: 16)
-        .onChange(of: player.currentVideo?.id, initial: true) { _, _ in syncState() }
-        .onChange(of: player.isPlaying, initial: true) { _, _ in syncState() }
+        .onCompatibleChange(of: player.currentVideo?.id, initial: true) { _ in syncState() }
+        .onCompatibleChange(of: player.isPlaying, initial: true) { _ in syncState() }
     }
 
     private func syncState() {

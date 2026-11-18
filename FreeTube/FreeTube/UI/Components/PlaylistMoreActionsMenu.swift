@@ -13,6 +13,7 @@ import UIKit
 /// auth gate is purely a UI affordance: when signed out, the menu is just the two URL actions.
 @available(iOS 17.0, *)
 struct PlaylistMoreActionsMenu: View {
+    @ObservedObject private var authState = AuthState.shared
     let playlist: Playlist
 
     @Environment(\.modelContext) private var modelContext
@@ -65,7 +66,7 @@ struct PlaylistMoreActionsMenu: View {
     }
 
     private var isSignedIn: Bool {
-        if case .loggedIn = AuthState.shared.status { return true }
+        if case .loggedIn = authState.status { return true }
         return false
     }
 

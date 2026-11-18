@@ -16,6 +16,7 @@ import OSLog
 ///   - Remove downloaded file: shown only when the video has a local downloaded file
 @available(iOS 17.0, *)
 struct VideoMoreActionsMenu: View {
+    @ObservedObject private var authState = AuthState.shared
     let video: Video
 
     @Environment(\.modelContext) private var modelContext
@@ -104,7 +105,7 @@ struct VideoMoreActionsMenu: View {
     }
 
     private var isSignedIn: Bool {
-        if case .loggedIn = AuthState.shared.status { return true }
+        if case .loggedIn = authState.status { return true }
         return false
     }
 

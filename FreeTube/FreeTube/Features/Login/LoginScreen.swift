@@ -26,7 +26,7 @@ struct LoginScreen: View {
                     Button("Cancel") { dismiss() }
                 }
             }
-            .onChange(of: coordinator.state) { _, new in
+            .onCompatibleChange(of: coordinator.state) { new in
                 if case .succeeded = new { dismiss() }
             }
             .alert(

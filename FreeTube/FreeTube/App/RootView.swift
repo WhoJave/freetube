@@ -93,7 +93,7 @@ struct RootView: View {
         }
         // Refresh the cached thumbnail whenever the user picks a new video. The mini-player's
         // `popupImage` reads this so it shows the actual preview instead of a placeholder icon.
-        .onChange(of: player.currentVideo?.id, initial: true) {
+        .onCompatibleChange(of: player.currentVideo?.id, initial: true) { _ in
             loadThumbnailForCurrentVideo()
         }
         // Force a light-content status bar (white glyphs) while the full-screen player is up.
@@ -102,7 +102,7 @@ struct RootView: View {
         // `overrideUserInterfaceStyle = .dark` does — UIKit recomputes the status bar trait from
         // that, gets `.dark`, and switches the bar to light content. We restore `.unspecified` when
         // the popup collapses so the rest of the app honors the system appearance again.
-        .onChange(of: player.fullScreenPresented) { _, presented in
+        .onCompatibleChange(of: player.fullScreenPresented) { presented in
             updateStatusBarOverride(forFullScreenOpen: presented)
         }
         // Menu-bar / keyboard-shortcut driven tab switching from `MacCommands`. The
@@ -263,20 +263,20 @@ struct PopupContentWrapper: View {
             }
             // Pump the mirrored state whenever any input changes. iOS 17's @Observable observation
             // makes these `onChange` fire reliably even though SwiftUI's modifier diffing wouldn't.
-            .onChange(of: player.elapsed, initial: true) { old, new in
+            .onCompatibleChange(of: player.elapsed, initial: true) { _ in
                 // Self.log.debug("onChange.elapsed old=\(old, privacy: .public) new=\(new, privacy: .public)")
                 refreshProgress(trigger: "elapsed")
             }
-            .onChange(of: player.duration) { old, new in
+            .onCompatibleChange(of: player.duration) { _ in
                 // Self.log.debug("onChange.duration old=\(old, privacy: .public) new=\(new, privacy: .public)")
                 refreshProgress(trigger: "duration")
             }
-            .onChange(of: player.loadState, initial: true) { old, new in
+            .onCompatibleChange(of: player.loadState, initial: true) { _ in
                 // Self.log.info("onChange.loadState old=\(String(describing: old), privacy: .public) new=\(String(describing: new), privacy: .public)")
                 refreshProgress(trigger: "loadState")
                 subtitleText = computedSubtitle
             }
-            .onChange(of: player.currentVideo?.id, initial: true) { old, new in
+            .onCompatibleChange(of: player.currentVideo?.id, initial: true) { _ in
                 // Self.log.info("onChange.video old=\(old ?? "nil", privacy: .public) new=\(new ?? "nil", privacy: .public)")
                 subtitleText = computedSubtitle
             }

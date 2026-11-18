@@ -9,6 +9,7 @@ import Kingfisher
 /// metadata, and the toggleable comments / queue panel below.
 @available(iOS 17.0, *)
 struct FullScreenPlayer: View {
+    @ObservedObject private var authState = AuthState.shared
     @Environment(PlayerStateManager.self) private var player
     @Environment(\.modelContext) private var modelContext
     /// Reactive list of all favorited videos so menu rendering doesn't have to fetch Core Data on
@@ -135,7 +136,7 @@ struct FullScreenPlayer: View {
                 // Reset description state, (best-effort) prefetch the snippet, AND pop any
                 // pushed channel screen whenever the user picks a new video — otherwise tapping
                 // the next video in the queue would leave a stale channel push on screen.
-                .onChange(of: video.id, initial: true) { _, _ in
+                .onCompatibleChange(of: video.id, initial: true) { _ in
                     details = nil
                     isDetailsExpanded = false
                     pushedChannel = nil
@@ -649,7 +650,7 @@ struct FullScreenPlayer: View {
     /// True when `AuthState` reports a logged-in session. Drives auth-gated visibility of the
     /// "Add to favorites" and "Add to playlist" menu items.
     private var isSignedIn: Bool {
-        if case .loggedIn = AuthState.shared.status { return true }
+        if case .loggedIn = authState.status { return true }
         return false
     }
 

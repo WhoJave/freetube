@@ -334,7 +334,7 @@ struct DownloadsScreen: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.down.circle.fill")
-                        .symbolEffect(.pulse, options: .repeating, value: inProgress.count)
+                        .compatiblePulse(value: inProgress.count)
                         .foregroundStyle(.tint)
                     Text(verbatim: "\(inProgress.count)")
                         .font(.caption.weight(.semibold))
