@@ -1,0 +1,55 @@
+name: FreeTube 16 compatibility IPA
+
+on:
+  push:
+    branches: [ios16-build]
+    paths:
+      - "iOS16/**"
+      - ".github/workflows/ios16-legacy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-ios16:
+    name: Build iOS 16 WebKit compatibility edition
+    runs-on: macos-26
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode 26.2
+        run: sudo xcode-select -s /Applications/Xcode_26.2.app/Contents/Developer
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: iOS16
+        run: xcodegen generate
+      - name: Build unsigned iPhoneOS app
+        run: |
+          set -o pipefail
+          xcodebuild -project iOS16/FreeTubeIOS16.xcodeproj -scheme FreeTube16 \
+            -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/FreeTube16DerivedData" \
+            IPHONEOS_DEPLOYMENT_TARGET=16.0 \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build 2>&1 | tee "$RUNNER_TEMP/ios16-build.log"
+      - name: Verify IPA minimum OS
+        run: |
+          APP="$RUNNER_TEMP/FreeTube16DerivedData/Build/Products/Release-iphoneos/FreeTube16.app"
+          test -d "$APP"
+          MIN_OS=$(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$APP/Info.plist")
+          echo "Built application minimum OS: $MIN_OS"
+          test "$MIN_OS" = "16.0"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist"
+      - name: Package unsigned iOS 16 IPA
+        run: |
+          mkdir -p "$RUNNER_TEMP/FreeTube16IPA/Payload"
+          cp -R "$RUNNER_TEMP/FreeTube16DerivedData/Build/Products/Release-iphoneos/FreeTube16.app" "$RUNNER_TEMP/FreeTube16IPA/Payload/"
+          cd "$RUNNER_TEMP/FreeTube16IPA"
+          zip -qry "$GITHUB_WORKSPACE/FreeTube16-WebKit-unsigned.ipa" Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FreeTube16-WebKit-unsigned
+          path: FreeTube16-WebKit-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14
